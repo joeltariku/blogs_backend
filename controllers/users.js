@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt')
 
 usersRouter.get('/', async (req, res, next) => {
     try {
-        const users = await BlogUser.find({})
+        const users = await BlogUser.find({}).populate('blogs', { title: 1, author: 1, url: 1 })
         res.json(users)
     } catch (error) {
         next(error)
@@ -22,11 +22,13 @@ usersRouter.post('/', async (req, res, next) => {
 
     const saltRounds = 10
     const passwordHash = await bcrypt.hash(password, saltRounds)
+    // const blogs = await BlogUser.find({}).populate('blogs', { title: 1, author: 1, url: 1 })
 
     const user = new BlogUser({
         username,
         name,
-        passwordHash
+        passwordHash,
+        // blogs
     })
 
     const savedUser = await user.save()

@@ -5,15 +5,25 @@ const helper  = require('./test_helper')
 
 const api = supertest(app)
 const Blog = require('../models/blog')
+const User = require('../models/user')
 
 describe('testing blogs api', () => {
   beforeEach(async () => {
     await Blog.deleteMany({})
+    await User.deleteMany({})
 
     const blogObjects = helper.initialBlogs
       .map(blog => new Blog(blog))
     const promiseArray = blogObjects.map(blog => blog.save())
     await Promise.all(promiseArray)
+
+    await api
+      .post('/api/users')
+      .send({
+        username: 'testuser',
+        name: 'Test User',
+        password: 'password123'
+      })
   })
   describe('tests for getting blogs', () => {
     test('notes are returned as json', async () => {
@@ -32,6 +42,16 @@ describe('testing blogs api', () => {
   })
   describe('tests for adding blogs', () => {
     test('a valid blog can be added', async () => {
+      const login = await api
+        .post('/api/login')
+        .send({
+          username: 'testuser',
+          password: 'password123'
+        })
+        .expect(200)
+      expect(login.body.token).toBeDefined()
+      const token = login.body.token
+
       const newBlog = {
         title: "New blog", 
         author: "John Doe",
@@ -40,6 +60,7 @@ describe('testing blogs api', () => {
       } 
       await api
         .post('/api/blogs')
+        .set('Authorization', `Bearer ${token}`)
         .send(newBlog)
         .expect(201)
         .expect('Content-Type', /application\/json/)
@@ -51,6 +72,16 @@ describe('testing blogs api', () => {
       //assert.strictEqual(blogsAtEnd[blogsAtEnd.length - 1].title, newBlog.title);
     })
     test('blog without likes defaults to 0', async () => {
+      const login = await api
+        .post('/api/login')
+        .send({
+          username: 'testuser',
+          password: 'password123'
+        })
+        .expect(200)
+      expect(login.body.token).toBeDefined()
+      const token = login.body.token
+
       const newBlog = {
         title: "Blog without likes",  
         author: "Jane Doe",
@@ -59,6 +90,7 @@ describe('testing blogs api', () => {
 
         await api
             .post('/api/blogs')
+            .set('Authorization', `Bearer ${token}`)
             .send(newBlog)
             .expect(201)
             .expect('Content-Type', /application\/json/) 
@@ -70,6 +102,16 @@ describe('testing blogs api', () => {
         // assert.strictEqual(blogsAtEnd[blogsAtEnd.length - 1].likes, 0)
     })
     test('blog without title returns 400', async () => {
+      const login = await api
+        .post('/api/login')
+        .send({
+          username: 'testuser',
+          password: 'password123'
+        })
+        .expect(200)
+      expect(login.body.token).toBeDefined()
+      const token = login.body.token
+
       const newBlog = {
         author: "John Doe",
         url: "http://example.com/no-title",
@@ -78,10 +120,21 @@ describe('testing blogs api', () => {
 
       await api
         .post('/api/blogs')
+        .set('Authorization', `Bearer ${token}`)
         .send(newBlog)
         .expect(400)
     })
     test('blog without url returns 400', async () => {
+       const login = await api
+        .post('/api/login')
+        .send({
+          username: 'testuser',
+          password: 'password123'
+        })
+        .expect(200)
+      expect(login.body.token).toBeDefined()
+      const token = login.body.token
+
       const newBlog = {
         title: "No URL Blog",
         author: "Jane Doe",
@@ -90,6 +143,7 @@ describe('testing blogs api', () => {
 
       await api
         .post('/api/blogs')
+        .set('Authorization', `Bearer ${token}`)
         .send(newBlog)
         .expect(400)
     })
