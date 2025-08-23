@@ -12,10 +12,10 @@ describe('testing blogs api', () => {
     await Blog.deleteMany({})
     await User.deleteMany({})
 
-    const blogObjects = helper.initialBlogs
-      .map(blog => new Blog(blog))
-    const promiseArray = blogObjects.map(blog => blog.save())
-    await Promise.all(promiseArray)
+    // const blogObjects = helper.initialBlogs
+    //   .map(blog => new Blog(blog))
+    // const promiseArray = blogObjects.map(blog => blog.save())
+    // await Promise.all(promiseArray)
 
     await api
       .post('/api/users')
@@ -24,6 +24,38 @@ describe('testing blogs api', () => {
         name: 'Test User',
         password: 'password123'
       })
+    
+    await api
+      .post('/api/users') 
+      .send({
+        username: 'seconduser',
+        name: 'Second User',
+        password: 'password456'
+      })
+
+    const login1 = await api
+      .post('/api/login')
+      .send({
+        username: 'testuser',
+        password: 'password123'
+      })
+
+    const login2 = await api
+      .post('/api/login')
+      .send({
+        username: 'seconduser',  
+        password: 'password456',
+      }) 
+
+    await api
+      .post('/api/blogs') 
+      .set('Authorization', `Bearer ${login1.body.token}`)
+      .send(helper.initialBlogs[0])
+
+    await api
+      .post('/api/blogs') 
+      .set('Authorization', `Bearer ${login2.body.token}`)
+      .send(helper.initialBlogs[1])
   })
   describe('tests for getting blogs', () => {
     test('notes are returned as json', async () => {
@@ -147,12 +179,25 @@ describe('testing blogs api', () => {
         .send(newBlog)
         .expect(400)
     })
-    test('a blog can be deleted', async () => {
+  }) 
+  describe('tests for deleting blogs', () => {
+    test('a blog can be deleted with proper user', async () => {
       const blogsAtStart = await helper.allBlogsInDb()
       const blogToDelete = blogsAtStart[0]
 
+      const login = await api
+        .post('/api/login')
+        .send({
+          username: 'testuser',
+          password: 'password123'
+        })
+        .expect(200)
+      expect(login.body.token).toBeDefined()
+      const token = login.body.token
+      console.log('blog to delete:', blogToDelete)
       await api
         .delete(`/api/blogs/${blogToDelete.id}`)
+        .set('Authorization', `Bearer ${token}`)
         .expect(204)
 
       const blogsAtEnd = await helper.allBlogsInDb()
@@ -163,7 +208,35 @@ describe('testing blogs api', () => {
       expect(ids.includes(blogToDelete.id)).toBe(false)
       // assert.deepStrictEqual(ids.includes(blogToDelete.id), false)
     })
-  }) 
+    test('deleting a blog without token is properly handled', async () => {
+      const blogsAtStart = await helper.allBlogsInDb()
+      const blogToDelete = blogsAtStart[0]
+
+      await api
+        .delete(`/api/blogs/${blogToDelete.id}`)
+        .expect(401)
+    })
+    test('deleting a blog with wrong user is properly handled', async () => {
+      const blogsAtStart = await helper.allBlogsInDb()
+      const blogToDelete = blogsAtStart.find(b => b.title === helper.initialBlogs[0].title)
+      expect(blogToDelete).toBeDefined()
+
+      const login = await api
+        .post('/api/login')
+        .send({
+          username: 'seconduser',
+          password: 'password456'
+        })
+
+      const token = login.body.token
+      expect(token).toBeDefined()
+
+      await api
+        .delete(`/api/blogs/${blogToDelete.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(401)
+    })
+  })
   describe('tests for updating blogs', () => {
     test('a blog can be updated', async () => {
       const blogsAtStart = await helper.allBlogsInDb()

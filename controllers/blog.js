@@ -12,19 +12,19 @@ blogsRouter.get('/',  async (request, response, next) => {
     }
 })
 
-const getTokenFrom = request => {
-    const authorization = request.get('authorization')
-    if (authorization && authorization.startsWith('Bearer ')) {
-        return authorization.replace('Bearer ', '')
-    }
-    return null
-}
+// const getTokenFrom = request => {
+//     const authorization = request.get('authorization')
+//     if (authorization && authorization.startsWith('Bearer ')) {
+//         return authorization.replace('Bearer ', '')
+//     }
+//     return null
+// }
 
 blogsRouter.post('/', async (request, response, next) => {
     try {
         // const blog = new Blog(request.body)
         const { title, author, url, likes } = request.body
-        const decodedToken = jwt.verify(getTokenFrom(request), process.env.SECRET)
+        const decodedToken = jwt.verify(request.token, process.env.SECRET)
         if (!decodedToken.id) {
             return response.status(401).json({ error: 'token missing or invalid' })
         }
@@ -48,6 +48,14 @@ blogsRouter.post('/', async (request, response, next) => {
 blogsRouter.delete('/:id', async (request, response, next) => {
     try {
         const { id } = request.params
+        const decodedToken = jwt.verify(request.token, process.env.SECRET)
+        if (!decodedToken.id) { 
+            return response.status(401).json({ error: 'token missing or invalid' })
+        } 
+        const blog = await Blog.findById(id)
+        if (blog.user.toString() !== decodedToken.id.toString()) {
+            return response.status(401).json({ error: 'only the creator can delete a blog' })
+        }
         await Blog.findByIdAndDelete(id)
         response.status(204).end()
     } catch (error) {
