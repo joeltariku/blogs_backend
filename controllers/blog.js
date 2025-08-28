@@ -71,6 +71,17 @@ blogsRouter.put('/:id', async (request, response, next) => {
         if (!blog) {
             return response.status(404).json({ error: 'Blog not found' })
         }
+
+        const decodedToken = jwt.verify(request.token, process.env.SECRET)
+        if (!decodedToken.id) {
+            return response.status(401).json({ error: 'token missing or invalid' })
+        }
+        if (!blog.user) {
+            return response.status(400).json({ error: "this blog doesn't have a user associated"})
+        }
+        if (blog.user.toString() !== decodedToken.id.toString()) {
+            return response.status(401).json({ error: 'only the creator can edit a blog' })
+        }
         blog.title = title
         blog.author = author
         blog.url = url

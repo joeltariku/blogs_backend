@@ -240,11 +240,22 @@ describe('testing blogs api', () => {
   describe('tests for updating blogs', () => {
     test('a blog can be updated', async () => {
       const blogsAtStart = await helper.allBlogsInDb()
-      const blog = blogsAtStart[0]
+      const blog = blogsAtStart[1]
 
       const editedBlog = {...blog, likes: 150}
+       const login = await api
+        .post('/api/login')
+        .send({
+          username: 'seconduser',
+          password: 'password456'
+        })
+
+      const token = login.body.token
+      expect(token).toBeDefined()
+
       const response = await api
       .put(`/api/blogs/${blog.id}`)
+      .set('Authorization', `Bearer ${token}`)
       .send(editedBlog)
       .expect(200)
       .expect('Content-Type', /application\/json/);
