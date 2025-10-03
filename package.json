@@ -5,7 +5,8 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node index.js",
     "dev": "cross-env NODE_ENV=development node --watch index.js",
-    "test": "cross-env NODE_ENV=test jest --testTimeout=5000 --detectOpenHandles --runInBand"
+    "test": "cross-env NODE_ENV=test jest --testTimeout=5000 --detectOpenHandles --runInBand",
+    "start:test": "cross-env NODE_ENV=test node --watch index.js"
   },
   "jest": {
     "verbose": true,
